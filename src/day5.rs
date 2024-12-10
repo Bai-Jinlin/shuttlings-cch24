@@ -1,4 +1,3 @@
-use core::str;
 
 use axum::{
     async_trait,
@@ -11,7 +10,6 @@ use axum::{
 };
 use cargo_manifest::Manifest;
 use serde::Deserialize;
-
 
 #[derive(Debug)]
 struct Metadata {
@@ -53,7 +51,6 @@ enum ContentType {
     Json
 }
 
-
 #[async_trait]
 impl<S> FromRequest<S> for Metadata
 where
@@ -88,13 +85,12 @@ where
 
             let metadata = package.map(|p| p.metadata).flatten();
 
-            let metadata = if let Some(value) = metadata {
+            let metadata = if let Some(v) = metadata {
                 let mut orders = Vec::new();
-                let v = value.as_table();
-                if let Some(v) = v {
-                    let v = v.get("orders");
-                    if let Some(v) = v {
-                        for v in v.as_array().unwrap() {
+                if let Some(m) = v.as_table() {
+                    let v = m.get("orders");
+                    if let Some(a) = v {
+                        for v in a.as_array().unwrap() {
                             let m: Result<Orders, toml::de::Error> = v.clone().try_into();
                             if let Ok(m) = m {
                                 orders.push(m);
