@@ -85,10 +85,6 @@ impl Game {
         }
     }
 
-    fn reset(&mut self) {
-        *self = Self::new();
-    }
-
     fn get_tile(&self, x: usize, y: usize) -> Tile {
         self.board[x][y]
     }
@@ -111,26 +107,30 @@ impl Game {
         t(&t2b) || t(&l2r) || t(&l_d) || t(&r_d)
     }
 
-    fn is_done(&self) -> bool {
-        self.is_done.is_some()
-    }
+    fn do_step(&mut self, column: usize, tile: Tile) -> bool {
+        if self.is_done.is_some() {
+            return false;
+        }
 
-    fn is_full(&self) -> bool {
-        self.board
+        // try push tile
+        let (y, find_tile) = match self.board[column]
+            .iter_mut()
+            .enumerate()
+            .find(|(_, t)| t == &&Tile::Empty)
+        {
+            Some(n) => n,
+            None => return false,
+        };
+        *find_tile = tile;
+
+        let is_full = self
+            .board
             .iter()
             .flatten()
             .find(|&&t| t == Tile::Empty)
-            .is_none()
-    }
+            .is_none();
 
-    fn do_step(&mut self, column: usize, tile: Tile) -> Option<()> {
-        let (y, find_tile) = self.board[column]
-            .iter_mut()
-            .enumerate()
-            .find(|(_, t)| t == &&Tile::Empty)?;
-        *find_tile = tile;
-
-        if self.is_full() {
+        if is_full {
             self.is_done = Some(DoneState::Nothing);
         }
 
@@ -141,7 +141,7 @@ impl Game {
                 Tile::Empty => unreachable!(),
             });
         }
-        Some(())
+        true
     }
 
     fn do_random(&mut self) {
@@ -159,6 +159,7 @@ impl Game {
         for x in 0..4 {
             for y in 0..4 {
                 if self.test_win(x, y) {
+                    //don't check this
                     self.is_done = Some(DoneState::Cookie);
                     return;
                 }
@@ -195,7 +196,7 @@ async fn p1(State(game): State<GameState>) -> String {
 }
 async fn p2(State(game): State<GameState>) -> String {
     let mut game = game.lock().unwrap();
-    game.reset();
+    *game = Game::new();
     game.to_string()
 }
 
@@ -206,10 +207,7 @@ async fn p3(State(game): State<GameState>, Path(payload): Path<Payload>) -> (Sta
     };
 
     let mut game = game.lock().unwrap();
-    if game.is_done() {
-        return (StatusCode::SERVICE_UNAVAILABLE, game.to_string());
-    }
-    if let Some(_) = game.do_step(colunm, tile) {
+    if game.do_step(colunm, tile) {
         (StatusCode::OK, game.to_string())
     } else {
         (StatusCode::SERVICE_UNAVAILABLE, game.to_string())
