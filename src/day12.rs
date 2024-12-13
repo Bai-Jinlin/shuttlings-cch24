@@ -31,12 +31,12 @@ impl Display for Tile {
     }
 }
 #[derive(Clone, Copy)]
-enum WinState {
+enum DoneState {
     Cookie,
     Milk,
     Nothing,
 }
-impl Display for WinState {
+impl Display for DoneState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Self::Cookie => "🍪 wins!",
@@ -49,7 +49,7 @@ impl Display for WinState {
 
 pub struct Game {
     board: [[Tile; 4]; 4],
-    is_done: Option<WinState>,
+    is_done: Option<DoneState>,
     rng: StdRng,
 }
 
@@ -133,13 +133,13 @@ impl Game {
         *find_tile = tile;
 
         if self.is_full() {
-            self.is_done = Some(WinState::Nothing);
+            self.is_done = Some(DoneState::Nothing);
             return Some(());
         }
         if self.test_win(column, y) {
             self.is_done = Some(match tile {
-                Tile::Cookie => WinState::Cookie,
-                Tile::Milk => WinState::Milk,
+                Tile::Cookie => DoneState::Cookie,
+                Tile::Milk => DoneState::Milk,
                 Tile::Empty => unreachable!(),
             });
         }
@@ -161,12 +161,12 @@ impl Game {
         for x in 0..4 {
             for y in 0..4 {
                 if self.test_win(x, y) {
-                    self.is_done = Some(WinState::Cookie);
+                    self.is_done = Some(DoneState::Cookie);
                     return;
                 }
             }
         }
-        self.is_done = Some(WinState::Nothing)
+        self.is_done = Some(DoneState::Nothing)
     }
 }
 
@@ -211,10 +211,11 @@ async fn p3(State(game): State<GameState>, Path(payload): Path<Payload>) -> (Sta
     if game.is_done() {
         return (StatusCode::SERVICE_UNAVAILABLE, game.to_string());
     }
-    if !game.do_step(colunm, tile).is_some() {
-        return (StatusCode::SERVICE_UNAVAILABLE, game.to_string());
+    if let Some(_) = game.do_step(colunm, tile) {
+        (StatusCode::OK, game.to_string())
+    } else {
+        (StatusCode::SERVICE_UNAVAILABLE, game.to_string())
     }
-    (StatusCode::OK, game.to_string())
 }
 async fn p4(State(game): State<GameState>) -> String {
     let mut game = game.lock().unwrap();
