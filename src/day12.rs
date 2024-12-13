@@ -119,14 +119,12 @@ impl Game {
         self.board
             .iter()
             .flatten()
-            .find(|t| t == &&Tile::Empty)
+            .find(|&&t| t == Tile::Empty)
             .is_none()
     }
 
     fn do_step(&mut self, column: usize, tile: Tile) -> Option<()> {
-        let board_col = &mut self.board[column];
-
-        let (y, find_tile) = board_col
+        let (y, find_tile) = self.board[column]
             .iter_mut()
             .enumerate()
             .find(|(_, t)| t == &&Tile::Empty)?;
@@ -134,8 +132,8 @@ impl Game {
 
         if self.is_full() {
             self.is_done = Some(DoneState::Nothing);
-            return Some(());
         }
+
         if self.test_win(column, y) {
             self.is_done = Some(match tile {
                 Tile::Cookie => DoneState::Cookie,
