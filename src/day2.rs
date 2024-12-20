@@ -1,7 +1,5 @@
 use std::{
-    net::{Ipv4Addr, Ipv6Addr},
-    ops::BitXor,
-    str::FromStr,
+    error::Error, net::{Ipv4Addr, Ipv6Addr}, ops::BitXor, str::FromStr
 };
 
 use axum::{extract::Query, routing::get, Router};
@@ -13,7 +11,7 @@ struct Ipv4P1 {
     key: String,
 }
 impl Ipv4P1 {
-    fn cal(self) -> anyhow::Result<String> {
+    fn cal(self) ->Result<String,Box<dyn Error>> {
         let f = Ipv4Addr::from_str(&self.from)?;
         let k = Ipv4Addr::from_str(&self.key)?;
         let v = f
@@ -37,7 +35,7 @@ struct Ipv4P2 {
     to: String,
 }
 impl Ipv4P2 {
-    fn cal(self) -> anyhow::Result<String> {
+    fn cal(self) ->Result<String,Box<dyn Error>> {
         let t = Ipv4Addr::from_str(&self.to)?;
         let f = Ipv4Addr::from_str(&self.from)?;
         let v = t
@@ -61,7 +59,7 @@ struct Ipv6P1 {
     key: String,
 }
 impl Ipv6P1 {
-    fn cal(self) -> anyhow::Result<String> {
+    fn cal(self) ->Result<String,Box<dyn Error>> {
         let f = Ipv6Addr::from_str(&self.from)?;
 
         let k = Ipv6Addr::from_str(&self.key)?;
@@ -85,7 +83,7 @@ struct Ipv6P2 {
     to: String,
 }
 impl Ipv6P2 {
-    fn cal(self) -> anyhow::Result<String> {
+    fn cal(self) ->Result<String,Box<dyn Error>> {
         let t = Ipv6Addr::from_str(&self.to)?;
         let f = Ipv6Addr::from_str(&self.from)?;
         let v = t
