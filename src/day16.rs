@@ -35,15 +35,13 @@ async fn p3(token: String) -> Result<Json<Value>, StatusCode> {
     validation.algorithms = vec![alg];
     validation.required_spec_claims.remove("exp");
     let key = DecodingKey::from_rsa_pem(key).unwrap();
-    let p = decode(&token, &key, &validation);
-    if let Err(err) = p {
-        let ret = match err.into_kind() {
+    let p = decode(&token, &key, &validation).map_err(|e|
+        match e.into_kind() {
             ErrorKind::InvalidSignature => StatusCode::UNAUTHORIZED,
             _ => StatusCode::BAD_REQUEST,
-        };
-        return Err(ret);
-    }
-    Ok(Json(p.unwrap().claims))
+        }
+    )?;
+    Ok(Json(p.claims))
 }
 
 pub fn router() -> Router {

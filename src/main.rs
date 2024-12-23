@@ -8,11 +8,12 @@ mod day19;
 mod day2;
 mod day5;
 mod day9;
+mod day23;
 
 #[shuttle_runtime::main]
 async fn main(
-    // #[shuttle_shared_db::Postgres(local_uri = "postgres://shuttle:qwe@localhost:5432/app_test")]
-    #[shuttle_shared_db::Postgres] pool: PgPool,
+    #[shuttle_shared_db::Postgres] 
+    pool: PgPool,
 ) -> shuttle_axum::ShuttleAxum {
     sqlx::migrate!()
         .run(&pool)
@@ -25,7 +26,8 @@ async fn main(
     let d9 = day9::router();
     let d12 = day12::router();
     let d16 = day16::router();
-    let d19 = day19::router(pool.clone());
+    let d19 = day19::router(pool);
+    let d23 = day23::router();
 
     let router = Router::new()
         .merge(d0)
@@ -34,6 +36,7 @@ async fn main(
         .merge(d9)
         .merge(d12)
         .merge(d16)
-        .merge(d19);
+        .merge(d19)
+        .merge(d23);
     Ok(router.into())
 }

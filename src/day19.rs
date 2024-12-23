@@ -42,6 +42,17 @@ struct Quote {
     version: i32,
 }
 
+#[derive(Serialize)]
+struct Quotes {
+    quotes: Vec<Quote>,
+    page: i64,
+    next_token: Option<String>,
+}
+#[derive(Debug, Deserialize)]
+struct ListQuery {
+    token: String,
+}
+
 fn uuid_from_str(s: &str) -> Result<Uuid, StatusCode> {
     Uuid::from_str(s).map_err(|_| StatusCode::BAD_REQUEST)
 }
@@ -60,15 +71,15 @@ async fn cite(
     let id = uuid_from_str(&id)?;
     sqlx::query_as(
         r#"
-SELECT id,author,quote,created_at,version
-FROM quotes
-WHERE id = $1
+        SELECT id, author, quote, created_at, version
+        FROM quotes
+        WHERE id = $1
         "#,
     )
     .bind(id)
     .fetch_one(&state.pool)
     .await
-    .map(|f| Json(f))
+    .map(Json)
     .map_err(|_| StatusCode::NOT_FOUND)
 }
 
@@ -79,15 +90,15 @@ async fn remove(
     let id = uuid_from_str(&id)?;
     sqlx::query_as(
         r#"
-DELETE FROM quotes
-WHERE id = $1
-RETURNING id,author,quote,created_at,version
-    "#,
+        DELETE FROM quotes
+        WHERE id = $1
+        RETURNING id, author, quote, created_at, version
+        "#,
     )
     .bind(id)
     .fetch_one(&state.pool)
     .await
-    .map(|f| Json(f))
+    .map(Json)
     .map_err(|_| StatusCode::NOT_FOUND)
 }
 
@@ -99,18 +110,18 @@ async fn undo(
     let id = uuid_from_str(&id)?;
     sqlx::query_as(
         r#"
-UPDATE quotes
-SET author = $1 , quote = $2 , version = version+1
-WHERE id = $3
-RETURNING id,author,quote,created_at,version
-    "#,
+        UPDATE quotes
+        SET author = $1, quote = $2, version = version+1
+        WHERE id = $3
+        RETURNING id, author, quote, created_at, version
+        "#,
     )
     .bind(payload.author)
     .bind(payload.quote)
     .bind(&id)
     .fetch_one(&state.pool)
     .await
-    .map(|f| Json(f))
+    .map(Json)
     .map_err(|_| StatusCode::NOT_FOUND)
 }
 
@@ -118,12 +129,12 @@ async fn draft(
     State(state): State<MyState>,
     Json(payload): Json<Payload>,
 ) -> (StatusCode, Json<Quote>) {
-    let rsp: Quote = sqlx::query_as(
+    let quote: Quote = sqlx::query_as(
         r#"
-INSERT INTO quotes (id, author, quote)
-VALUES ($1,$2,$3)
-RETURNING id,author,quote,created_at,version
-"#,
+        INSERT INTO quotes (id, author, quote)
+        VALUES ($1, $2, $3)
+        RETURNING id, author, quote, created_at, version
+        "#,
     )
     .bind(Uuid::new_v4())
     .bind(payload.author)
@@ -132,18 +143,7 @@ RETURNING id,author,quote,created_at,version
     .await
     .unwrap();
 
-    (StatusCode::CREATED, Json(rsp))
-}
-
-#[derive(Serialize)]
-struct Quotes {
-    quotes: Vec<Quote>,
-    page: i64,
-    next_token: Option<String>,
-}
-#[derive(Debug, Deserialize)]
-struct ListQuery {
-    token: String,
+    (StatusCode::CREATED, Json(quote))
 }
 
 fn gen_random_string() -> String {
@@ -169,6 +169,7 @@ async fn list(
     } else {
         0
     };
+
     let offset = page_number * 3;
 
     let (count,): (i64,) = sqlx::query_as(r"SELECT COUNT(id) FROM quotes")
@@ -190,11 +191,11 @@ async fn list(
 
     let quotes = sqlx::query_as(
         r#"
-SELECT id,author,quote,created_at,version
-FROM quotes
-ORDER BY created_at ASC
-LIMIT 3 OFFSET $1
-    "#,
+        SELECT id, author, quote, created_at, version
+        FROM quotes
+        ORDER BY created_at ASC
+        LIMIT 3 OFFSET $1
+        "#,
     )
     .bind(offset)
     .fetch_all(&state.pool)
